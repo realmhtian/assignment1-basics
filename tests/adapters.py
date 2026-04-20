@@ -11,7 +11,7 @@ from torch import Tensor
 from cs336_basics.pretokenization_example import get_chunk_in_parallel
 from collections import Counter
 from cs336_basics.tokenizer import Tokenizer
-
+from cs336_basics.linear import Linear
 
 def run_linear(
     d_in: int,
@@ -32,7 +32,9 @@ def run_linear(
         Float[Tensor, "... d_out"]: The transformed output of your linear module.
     """
 
-    raise NotImplementedError
+    linear = Linear(d_in, d_out, device=weights.device, dtype=weights.dtype)
+    linear.load_state_dict({"W": weights})
+    return linear(in_features)
 
 
 def run_embedding(
