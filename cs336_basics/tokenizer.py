@@ -26,6 +26,8 @@ class Tokenizer:
             raw_vocab = json.load(vf)
             for k, v in raw_vocab.items():
                 vocab[int(k)] = eval(v)
+            # k 从字符串转成整数（JSON 键只能是字符串）
+            # v 从字符串表示的字节转成实际字节对象
 
         with open(merges_filepath, "r", encoding="utf-8") as mf:
             for line in mf:
@@ -36,6 +38,7 @@ class Tokenizer:
                 merges.append((eval(left_str), eval(right_str)))
 
         return cls(vocab, merges, special_tokens)
+        # cls 是类方法的第一个参数，代表类本身（不是实例）。类似于实例方法中的 self。
         
         
     def encode(self, text: str) -> list[int]:
@@ -51,6 +54,7 @@ class Tokenizer:
             sorted_special_tokens = sorted(self.special_tokens, key=len, reverse=True)
             special_pattern = "|".join(re.escape(tok) for tok in sorted_special_tokens)#example: text = "helloworld"special_tokens = ["world"]
             # special_pattern = "|".join(re.escape(tok) for tok in self.special_tokens) 
+            # re.escape() 将字符串中所有特殊正则表达式字符转义成字面量，这样就不会被当作正则表达式语法来解析。
             parts = re.split(f"({special_pattern})", text) # example: ["hello", "<|endoftext|>", "world"]
             
         else:
@@ -100,7 +104,7 @@ class Tokenizer:
                             i += 2
                         else:
                             new_seq.append(token_seq[i])
-                            i += 1
+                            i += 1  
 
                     token_seq = tuple(new_seq)
 

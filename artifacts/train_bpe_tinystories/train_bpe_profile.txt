@@ -1,0 +1,38 @@
+         356466022 function calls (356465968 primitive calls) in 84.734 seconds
+
+   Ordered by: cumulative time
+   List reduced from 443 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1   49.564   49.564   84.734   84.734 adapters.py:581(run_train_bpe)
+     9757    9.044    0.001   14.277    0.001 {built-in method builtins.max}
+127765318   12.569    0.000   12.569    0.000 {method 'get' of 'dict' objects}
+128545519    6.840    0.000    6.840    0.000 {built-in method builtins.len}
+ 99657168    5.234    0.000    5.234    0.000 adapters.py:634(<lambda>)
+    12/10    0.000    0.000    2.697    0.270 connection.py:390(_recv)
+    16/14    0.532    0.033    2.697    0.193 {built-in method posix.read}
+        1    0.000    0.000    1.415    1.415 pretokenization_example.py:72(get_chunk_in_parallel)
+        1    0.000    0.000    1.395    1.395 pool.py:738(__exit__)
+        1    0.000    0.000    1.394    1.394 pool.py:654(terminate)
+       11    0.000    0.000    1.367    0.124 util.py:208(__call__)
+        1    0.000    0.000    1.367    1.367 pool.py:680(_terminate_pool)
+        5    0.000    0.000    1.357    0.271 connection.py:246(recv)
+        1    0.000    0.000    1.354    1.354 pool.py:671(_help_stuff_finish)
+        1    0.000    0.000    1.354    1.354 {method 'acquire' of '_multiprocessing.SemLock' objects}
+      3/1    0.000    0.000    1.354    1.354 threading.py:1018(_bootstrap)
+      3/1    0.000    0.000    1.354    1.354 threading.py:1058(_bootstrap_inner)
+      3/1    0.000    0.000    1.354    1.354 threading.py:1001(run)
+        1    0.000    0.000    1.354    1.354 pool.py:573(_handle_results)
+      6/5    0.000    0.000    1.354    0.271 connection.py:429(_recv_bytes)
+        1    0.000    0.000    1.353    1.353 pool.py:527(_handle_tasks)
+        1    0.000    0.000    1.353    1.353 pool.py:506(_handle_workers)
+        5    0.000    0.000    1.350    0.270 pool.py:500(_wait_for_updates)
+       12    0.000    0.000    1.348    0.112 connection.py:1122(wait)
+        8    0.000    0.000    0.812    0.102 connection.py:202(send)
+       13    0.000    0.000    0.792    0.061 connection.py:406(_send_bytes)
+       44    0.792    0.018    0.792    0.018 {built-in method posix.write}
+       17    0.000    0.000    0.792    0.047 connection.py:381(_send)
+   297683    0.031    0.000    0.031    0.000 {method 'append' of 'list' objects}
+       21    0.021    0.001    0.021    0.001 {method 'dump' of '_pickle.Pickler' objects}
+
+

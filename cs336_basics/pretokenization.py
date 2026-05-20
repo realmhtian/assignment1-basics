@@ -54,14 +54,15 @@ def process_chunk(args):
     
     pattern = "|".join(re.escape(tok) for tok in special_tokens)
     parts = re.split(pattern, chunk)
-    # Step 2: 定义regex pattern
+    # Stage 2: 定义regex pattern
     PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
     counter = Counter()
-    # Step 3: 应用regex并计数频率
+    # Stage 3: 应用regex并计数频率
     for part in parts:
         if not part:
             continue
-        tokens = re.findall(PAT, part)
+        # tokens = re.findall(PAT, part)
+        tokens = [m.group() for m in re.finditer(PAT, part)]
         counter.update(tokens)
 
     return counter
@@ -82,7 +83,7 @@ def get_chunk_in_parallel(file_path, special_tokens):
     # Run pre-tokenization on your chunk and store the counts for each pre-token
     with mp.Pool(num_processes) as pool:
         chunk_counters = pool.map(process_chunk, args)
-    # Step 4: 合并所有 chunk 的结果
+    # 合并所有 chunk 的结果
     total_counter = Counter()
     for c in chunk_counters:
         total_counter.update(c)

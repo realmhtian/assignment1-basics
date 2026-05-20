@@ -19,9 +19,4 @@ class Embedding(nn.Module):
         Lookup the embedding vectors for the given token IDs.
         """
         return self.embedding_mat[token_ids]
-
-
-
-
-
        

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import cProfile
 import os
+import pstats
+from pathlib import Path
 from collections.abc import Iterable
 from typing import IO, Any, BinaryIO
 
@@ -11,7 +14,7 @@ from torch import Tensor
 from collections import Counter
 
 from cs336_basics.linear import Linear
-from cs336_basics.pretokenization_example import get_chunk_in_parallel
+from cs336_basics.pretokenization import get_chunk_in_parallel
 from cs336_basics.embedding import Embedding
 from cs336_basics.tokenizer import Tokenizer
 from cs336_basics.RMSNorm import RMSNorm
@@ -34,7 +37,6 @@ def run_linear(
     Returns:
         Float[Tensor, "... d_out"]: The transformed output of your linear module.
     """
-
     linear = Linear(d_in, d_out, device=weights.device, dtype=weights.dtype)
     linear.load_state_dict({"W": weights})
     return linear(in_features)
@@ -58,8 +60,10 @@ def run_embedding(
     Returns:
         Float[Tensor, "... d_model"]: Batch of embeddings returned by your Embedding layer.
     """
+
     embedding = Embedding(vocab_size, d_model, device=weights.device, dtype=weights.dtype)
-    embedding.load_state_dict({"embedding_mat": weights})
+    embedding.load_state_dict({"embedding_mat": weights})#将预训练的权重加载到 Embedding 模型中。
+    # embedding.embedding_mat = weights 和上一句等效
     return embedding(token_ids)
 
 
@@ -119,12 +123,12 @@ def run_scaled_dot_product_attention(
 def run_multihead_self_attention(
     d_model: int,
     num_heads: int,
-    q_proj_weight: Float[Tensor, " d_model d_model"],
-    k_proj_weight: Float[Tensor, " d_model d_model"],
-    v_proj_weight: Float[Tensor, " d_model d_model"],
-    o_proj_weight: Float[Tensor, " d_model d_model"],
-    in_features: Float[Tensor, " ... sequence_length d_model"],
-) -> Float[Tensor, " ... sequence_length d_model"]:
+    q_proj_weight: Float[Tensor, " d_k d_in"],
+    k_proj_weight: Float[Tensor, " d_k d_in"],
+    v_proj_weight: Float[Tensor, " d_v d_in"],
+    o_proj_weight: Float[Tensor, " d_model d_v"],
+    in_features: Float[Tensor, " ... sequence_length d_in"],
+) -> Float[Tensor, " ... sequence_length d_out"]:
     """
     Given the key, query, and value projection weights of a naive unbatched
     implementation of multi-head attention, return the output of an optimized batched
@@ -137,14 +141,14 @@ def run_multihead_self_attention(
         d_model (int): Dimensionality of the feedforward input and output.
         num_heads (int): Number of heads to use in multi-headed attention.
         max_seq_len (int): Maximum sequence length to pre-cache if your implementation does that.
-        q_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the Q projection
-        k_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the K projection
-        v_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the V projection
-        o_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the output projection
-        in_features (Float[Tensor, "... sequence_length d_model"]): Tensor to run your implementation on.
+        q_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the Q projection
+        k_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the K projection
+        v_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the V projection
+        o_proj_weight (Float[Tensor, "d_model d_v"]): Weights for the output projection
+        in_features (Float[Tensor, "... sequence_length d_in"]): Tensor to run your implementation on.
 
     Returns:
-        Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
+        Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
     raise NotImplementedError
@@ -155,13 +159,13 @@ def run_multihead_self_attention_with_rope(
     num_heads: int,
     max_seq_len: int,
     theta: float,
-    q_proj_weight: Float[Tensor, " d_model d_model"],
-    k_proj_weight: Float[Tensor, " d_model d_model"],
-    v_proj_weight: Float[Tensor, " d_model d_model"],
-    o_proj_weight: Float[Tensor, " d_model d_model"],
-    in_features: Float[Tensor, " ... sequence_length d_model"],
+    q_proj_weight: Float[Tensor, " d_k d_in"],
+    k_proj_weight: Float[Tensor, " d_k d_in"],
+    v_proj_weight: Float[Tensor, " d_v d_in"],
+    o_proj_weight: Float[Tensor, " d_model d_v"],
+    in_features: Float[Tensor, " ... sequence_length d_in"],
     token_positions: Int[Tensor, " ... sequence_length"] | None = None,
-) -> Float[Tensor, " ... sequence_length d_model"]:
+) -> Float[Tensor, " ... sequence_length d_out"]:
     """
     Given the key, query, and value projection weights of a naive unbatched
     implementation of multi-head attention, return the output of an optimized batched
@@ -176,15 +180,15 @@ def run_multihead_self_attention_with_rope(
         num_heads (int): Number of heads to use in multi-headed attention.
         max_seq_len (int): Maximum sequence length to pre-cache if your implementation does that.
         theta (float): RoPE parameter.
-        q_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the Q projection
-        k_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the K projection
-        v_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the V projection
-        o_proj_weight (Float[Tensor, "d_model d_model"]): Weights for the output projection
-        in_features (Float[Tensor, "... sequence_length d_model"]): Tensor to run your implementation on.
+        q_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the Q projection
+        k_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the K projection
+        v_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the V projection
+        o_proj_weight (Float[Tensor, "d_model d_v"]): Weights for the output projection
+        in_features (Float[Tensor, "... sequence_length d_in"]): Tensor to run your implementation on.
         token_positions (Int[Tensor, " ... sequence_length"] | None): Optional tensor with the positions of the tokens
 
     Returns:
-        Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
+        Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
     raise NotImplementedError
@@ -390,6 +394,7 @@ def run_rmsnorm(
     rmsnorm = RMSNorm(d_model, eps)
     rmsnorm.load_state_dict({"gain": weights})
     return rmsnorm(in_features)
+    
 
 
 def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
@@ -627,6 +632,7 @@ def run_train_bpe(
             break
 
         best_pair = max(pair_counts.items(), key=lambda x: (x[1], x[0]))[0]
+
         new_token = best_pair[0] + best_pair[1]
         vocab[next_id] = new_token
         next_id += 1
@@ -636,24 +642,24 @@ def run_train_bpe(
         new_token_freqs = {}
         for token_seq, freq in token_freqs.items():
             has_best_pair = False
-            for i in range(len(token_seq) - 1):
+            for i in range(len(token_seq) - 1): #检查每个token序列是否包含 best_pair
                 if token_seq[i] == best_pair[0] and token_seq[i + 1] == best_pair[1]:
                     has_best_pair = True
-                    break
+                    break 
 
             if not has_best_pair:
                 new_token_freqs[token_seq] = new_token_freqs.get(token_seq, 0) + freq
                 continue
 
-            for i in range(len(token_seq) - 1):
+            for i in range(len(token_seq) - 1):# paircounts更新：减去旧的 pair 统计
                 pair = (token_seq[i], token_seq[i + 1])
                 pair_counts[pair] -= freq
                 if pair_counts[pair] == 0:
-                    del pair_counts[pair]
+                    del pair_counts[pair] 
 
             new_seq = []
             i = 0
-            while i < len(token_seq):
+            while i < len(token_seq): #合并
                 if (
                     i < len(token_seq) - 1
                     and token_seq[i] == best_pair[0]
@@ -669,7 +675,7 @@ def run_train_bpe(
 
             for i in range(len(new_seq) - 1):
                 pair = (new_seq[i], new_seq[i + 1])
-                pair_counts[pair] += freq
+                pair_counts[pair] += freq # paircounts更新：加上新的 pair 统计
 
             new_token_freqs[new_seq] = new_token_freqs.get(new_seq, 0) + freq
 
@@ -707,4 +713,3 @@ if __name__ == '__main__':
     print("saved merges to", output_dir / "merges.txt")
     print("saved profile to", output_dir / "train_bpe.prof")
     print("saved readable profile to", output_dir / "train_bpe_profile.txt")
-
